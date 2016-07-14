@@ -18,7 +18,7 @@ public class ChartDataRendererBase: ChartRendererBase
 {
     public var animator: ChartAnimator?
     
-    public init(animator: ChartAnimator?, viewPortHandler: ChartViewPortHandler)
+    public init(animator: ChartAnimator?, viewPortHandler: ChartViewPortHandler?)
     {
         super.init(viewPortHandler: viewPortHandler)
         
@@ -47,4 +47,8 @@ public class ChartDataRendererBase: ChartRendererBase
     {
         fatalError("drawHighlighted() cannot be called on ChartDataRendererBase")
     }
+    
+    /// An opportunity for initializing internal buffers used for rendering with a new size.
+    /// Since this might do memory allocations, it should only be called if necessary.
+    public func initBuffers() { }
 }

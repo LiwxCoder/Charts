@@ -23,7 +23,7 @@ public class LineChartRenderer: LineRadarChartRenderer
 {
     public weak var dataProvider: LineChartDataProvider?
     
-    public init(dataProvider: LineChartDataProvider?, animator: ChartAnimator?, viewPortHandler: ChartViewPortHandler)
+    public init(dataProvider: LineChartDataProvider?, animator: ChartAnimator?, viewPortHandler: ChartViewPortHandler?)
     {
         super.init(animator: animator, viewPortHandler: viewPortHandler)
         
@@ -91,15 +91,20 @@ public class LineChartRenderer: LineRadarChartRenderer
     public func drawCubicBezier(context context: CGContext, dataSet: ILineChartDataSet)
     {
         guard let
-            trans = dataProvider?.getTransformer(dataSet.axisDependency),
+            dataProvider = dataProvider,
             animator = animator
             else { return }
         
+        let trans = dataProvider.getTransformer(dataSet.axisDependency)
+        
         let entryCount = dataSet.entryCount
         
+        let low = dataProvider.lowestVisibleXIndex
+        let high = dataProvider.highestVisibleXIndex
+        
         guard let
-            entryFrom = dataSet.entryForXIndex(self.minX < 0 ? 0 : self.minX, rounding: .Down),
-            entryTo = dataSet.entryForXIndex(self.maxX, rounding: .Up)
+            entryFrom = dataSet.entryForXPos(low, rounding: .Down),
+            entryTo = dataSet.entryForXPos(high, rounding: .Up)
             else { return }
         
         let diff = (entryFrom == entryTo) ? 1 : 0
@@ -119,7 +124,7 @@ public class LineChartRenderer: LineRadarChartRenderer
         
         var valueToPixelMatrix = trans.valueToPixelMatrix
         
-        let size = Int(ceil(CGFloat(maxx - minx) * phaseX + CGFloat(minx)))
+        let size = Int(ceil(Double(maxx - minx) * phaseX + Double(minx)))
         
         if (size - minx >= 2)
         {
@@ -136,7 +141,7 @@ public class LineChartRenderer: LineRadarChartRenderer
             if cur == nil || next == nil { return }
             
             // let the spline start
-            CGPathMoveToPoint(cubicPath, &valueToPixelMatrix, CGFloat(cur.xIndex), CGFloat(cur.value) * phaseY)
+            CGPathMoveToPoint(cubicPath, &valueToPixelMatrix, CGFloat(cur.x), CGFloat(cur.y * phaseY))
             
             for j in (minx + 1).stride(to: min(size, entryCount), by: 1)
             {
@@ -147,18 +152,18 @@ public class LineChartRenderer: LineRadarChartRenderer
                 
                 if next == nil { break }
                 
-                prevDx = CGFloat(cur.xIndex - prevPrev.xIndex) * intensity
-                prevDy = CGFloat(cur.value - prevPrev.value) * intensity
-                curDx = CGFloat(next.xIndex - prev.xIndex) * intensity
-                curDy = CGFloat(next.value - prev.value) * intensity
+                prevDx = CGFloat(cur.x - prevPrev.x) * intensity
+                prevDy = CGFloat(cur.y - prevPrev.y) * intensity
+                curDx = CGFloat(next.x - prev.x) * intensity
+                curDy = CGFloat(next.y - prev.y) * intensity
                 
                 CGPathAddCurveToPoint(cubicPath, &valueToPixelMatrix,
-                                      CGFloat(prev.xIndex) + prevDx,
-                                      (CGFloat(prev.value) + prevDy) * phaseY,
-                                      CGFloat(cur.xIndex) - curDx,
-                                      (CGFloat(cur.value) - curDy) * phaseY,
-                                      CGFloat(cur.xIndex),
-                                      CGFloat(cur.value) * phaseY)
+                                      CGFloat(prev.x) + prevDx,
+                                      (CGFloat(prev.y) + prevDy) * CGFloat(phaseY),
+                                      CGFloat(cur.x) - curDx,
+                                      (CGFloat(cur.y) - curDy) * CGFloat(phaseY),
+                                      CGFloat(cur.x),
+                                      CGFloat(cur.y) * CGFloat(phaseY))
             }
         }
         
@@ -183,15 +188,20 @@ public class LineChartRenderer: LineRadarChartRenderer
     public func drawHorizontalBezier(context context: CGContext, dataSet: ILineChartDataSet)
     {
         guard let
-            trans = dataProvider?.getTransformer(dataSet.axisDependency),
+            dataProvider = dataProvider,
             animator = animator
             else { return }
         
+        let trans = dataProvider.getTransformer(dataSet.axisDependency)
+        
         let entryCount = dataSet.entryCount
         
+        let low = dataProvider.lowestVisibleXIndex
+        let high = dataProvider.highestVisibleXIndex
+        
         guard let
-            entryFrom = dataSet.entryForXIndex(self.minX < 0 ? 0 : self.minX, rounding: .Down),
-            entryTo = dataSet.entryForXIndex(self.maxX, rounding: .Up)
+            entryFrom = dataSet.entryForXPos(low, rounding: .Down),
+            entryTo = dataSet.entryForXPos(high, rounding: .Up)
             else { return }
         
         let diff = (entryFrom == entryTo) ? 1 : 0
@@ -209,7 +219,7 @@ public class LineChartRenderer: LineRadarChartRenderer
         
         var valueToPixelMatrix = trans.valueToPixelMatrix
         
-        let size = Int(ceil(CGFloat(maxx - minx) * phaseX + CGFloat(minx)))
+        let size = Int(ceil(Double(maxx - minx) * phaseX + Double(minx)))
         
         if (size - minx >= 2)
         {
@@ -219,20 +229,20 @@ public class LineChartRenderer: LineRadarChartRenderer
             if cur == nil { return }
             
             // let the spline start
-            CGPathMoveToPoint(cubicPath, &valueToPixelMatrix, CGFloat(cur.xIndex), CGFloat(cur.value) * phaseY)
+            CGPathMoveToPoint(cubicPath, &valueToPixelMatrix, CGFloat(cur.x), CGFloat(cur.x * phaseY))
             
             for j in (minx + 1).stride(to: min(size, entryCount), by: 1)
             {
                 prev = cur
                 cur = dataSet.entryForIndex(j)
                 
-                let cpx = CGFloat(prev.xIndex) + CGFloat(cur.xIndex - prev.xIndex) / 2.0
+                let cpx = CGFloat(prev.x + (cur.x - prev.x)) / 2.0
                 
                 CGPathAddCurveToPoint(cubicPath,
                                       &valueToPixelMatrix,
-                                      cpx, CGFloat(prev.value) * phaseY,
-                                      cpx, CGFloat(cur.value) * phaseY,
-                                      CGFloat(cur.xIndex), CGFloat(cur.value) * phaseY)
+                                      cpx, CGFloat(prev.y * phaseY),
+                                      cpx, CGFloat(cur.y * phaseY),
+                                      CGFloat(cur.x), CGFloat(cur.y * phaseY))
             }
         }
         
@@ -268,8 +278,8 @@ public class LineChartRenderer: LineRadarChartRenderer
         // Take the from/to xIndex from the entries themselves,
         // so missing entries won't screw up the filling.
         // What we need to draw is line from points of the xIndexes - not arbitrary entry indexes!
-        let xTo = dataSet.entryForIndex(to - 1)?.xIndex ?? 0
-        let xFrom = dataSet.entryForIndex(from)?.xIndex ?? 0
+        let xTo = dataSet.entryForIndex(to - 1)?.x ?? 0.0
+        let xFrom = dataSet.entryForIndex(from)?.x ?? 0.0
 
         var pt1 = CGPoint(x: CGFloat(xTo), y: fillMin)
         var pt2 = CGPoint(x: CGFloat(xFrom), y: fillMin)
@@ -295,9 +305,12 @@ public class LineChartRenderer: LineRadarChartRenderer
     public func drawLinear(context context: CGContext, dataSet: ILineChartDataSet)
     {
         guard let
-            trans = dataProvider?.getTransformer(dataSet.axisDependency),
-            animator = animator
+            dataProvider = dataProvider,
+            animator = animator,
+            viewPortHandler = self.viewPortHandler
             else { return }
+        
+        let trans = dataProvider.getTransformer(dataSet.axisDependency)
         
         let valueToPixelMatrix = trans.valueToPixelMatrix
         
@@ -307,10 +320,13 @@ public class LineChartRenderer: LineRadarChartRenderer
         
         let phaseX = max(0.0, min(1.0, animator.phaseX))
         let phaseY = animator.phaseY
-
+        
+        let low = dataProvider.lowestVisibleXIndex
+        let high = dataProvider.highestVisibleXIndex
+        
         guard let
-            entryFrom = dataSet.entryForXIndex(self.minX < 0 ? 0 : self.minX, rounding: .Down),
-            entryTo = dataSet.entryForXIndex(self.maxX, rounding: .Up)
+            entryFrom = dataSet.entryForXPos(low, rounding: .Down),
+            entryTo = dataSet.entryForXPos(high, rounding: .Up)
             else { return }
         
         var diff = (entryFrom == entryTo) ? 1 : 0
@@ -334,7 +350,7 @@ public class LineChartRenderer: LineRadarChartRenderer
                 _lineSegments = [CGPoint](count: pointsPerEntryPair, repeatedValue: CGPoint())
             }
             
-            let count = Int(ceil(CGFloat(maxx - minx) * phaseX + CGFloat(minx)))
+            let count = Int(ceil(Double(maxx - minx) * phaseX + Double(minx)))
             for j in minx.stride(to: count, by: 1)
             {
                 if (count > 1 && j == count - 1)
@@ -346,8 +362,8 @@ public class LineChartRenderer: LineRadarChartRenderer
                 
                 if e == nil { continue }
                 
-                _lineSegments[0].x = CGFloat(e.xIndex)
-                _lineSegments[0].y = CGFloat(e.value) * phaseY
+                _lineSegments[0].x = CGFloat(e.x)
+                _lineSegments[0].y = CGFloat(e.y * phaseY)
                 
                 if (j + 1 < count)
                 {
@@ -357,13 +373,13 @@ public class LineChartRenderer: LineRadarChartRenderer
                     
                     if isDrawSteppedEnabled
                     {
-                        _lineSegments[1] = CGPoint(x: CGFloat(e.xIndex), y: _lineSegments[0].y)
+                        _lineSegments[1] = CGPoint(x: CGFloat(e.x), y: _lineSegments[0].y)
                         _lineSegments[2] = _lineSegments[1]
-                        _lineSegments[3] = CGPoint(x: CGFloat(e.xIndex), y: CGFloat(e.value) * phaseY)
+                        _lineSegments[3] = CGPoint(x: CGFloat(e.x), y: CGFloat(e.y * phaseY))
                     }
                     else
                     {
-                        _lineSegments[1] = CGPoint(x: CGFloat(e.xIndex), y: CGFloat(e.value) * phaseY)
+                        _lineSegments[1] = CGPoint(x: CGFloat(e.x), y: CGFloat(e.y * phaseY))
                     }
                 }
                 else
@@ -409,7 +425,7 @@ public class LineChartRenderer: LineRadarChartRenderer
             
             if e1 != nil
             {
-                let count = Int(ceil(CGFloat(maxx - minx) * phaseX + CGFloat(minx)))
+                let count = Int(ceil(Double(maxx - minx) * phaseX + Double(minx)))
                 
                 var j = 0
                 for x in (count > 1 ? minx + 1 : minx).stride(to: count, by: 1)
@@ -421,8 +437,8 @@ public class LineChartRenderer: LineRadarChartRenderer
                     
                     _lineSegments[j] = CGPointApplyAffineTransform(
                         CGPoint(
-                            x: CGFloat(e1.xIndex),
-                            y: CGFloat(e1.value) * phaseY
+                            x: CGFloat(e1.x),
+                            y: CGFloat(e1.y * phaseY)
                         ), valueToPixelMatrix)
                     j += 1
                     
@@ -430,23 +446,23 @@ public class LineChartRenderer: LineRadarChartRenderer
                     {
                         _lineSegments[j] = CGPointApplyAffineTransform(
                             CGPoint(
-                                x: CGFloat(e2.xIndex),
-                                y: CGFloat(e1.value) * phaseY
+                                x: CGFloat(e2.x),
+                                y: CGFloat(e1.y * phaseY)
                             ), valueToPixelMatrix)
                         j += 1
                         
                         _lineSegments[j] = CGPointApplyAffineTransform(
                             CGPoint(
-                                x: CGFloat(e2.xIndex),
-                                y: CGFloat(e1.value) * phaseY
+                                x: CGFloat(e2.x),
+                                y: CGFloat(e1.y * phaseY)
                             ), valueToPixelMatrix)
                         j += 1
                     }
                     
                     _lineSegments[j] = CGPointApplyAffineTransform(
                         CGPoint(
-                            x: CGFloat(e2.xIndex),
-                            y: CGFloat(e2.value) * phaseY
+                            x: CGFloat(e2.x),
+                            y: CGFloat(e2.y * phaseY)
                         ), valueToPixelMatrix)
                     j += 1
                 }
@@ -505,29 +521,29 @@ public class LineChartRenderer: LineRadarChartRenderer
         e = dataSet.entryForIndex(from)
         if e != nil
         {
-            CGPathMoveToPoint(filled, &matrix, CGFloat(e.xIndex), fillMin)
-            CGPathAddLineToPoint(filled, &matrix, CGFloat(e.xIndex), CGFloat(e.value) * phaseY)
+            CGPathMoveToPoint(filled, &matrix, CGFloat(e.x), fillMin)
+            CGPathAddLineToPoint(filled, &matrix, CGFloat(e.x), CGFloat(e.y * phaseY))
         }
         
         // create a new path
-        for x in (from + 1).stride(to: Int(ceil(CGFloat(to - from) * phaseX + CGFloat(from))), by: 1)
+        for x in (from + 1).stride(to: Int(ceil(Double(to - from) * phaseX + Double(from))), by: 1)
         {
             guard let e = dataSet.entryForIndex(x) else { continue }
             
             if isDrawSteppedEnabled
             {
                 guard let ePrev = dataSet.entryForIndex(x-1) else { continue }
-                CGPathAddLineToPoint(filled, &matrix, CGFloat(e.xIndex), CGFloat(ePrev.value) * phaseY)
+                CGPathAddLineToPoint(filled, &matrix, CGFloat(e.x), CGFloat(ePrev.y * phaseY))
             }
             
-            CGPathAddLineToPoint(filled, &matrix, CGFloat(e.xIndex), CGFloat(e.value) * phaseY)
+            CGPathAddLineToPoint(filled, &matrix, CGFloat(e.x), CGFloat(e.y * phaseY))
         }
         
         // close up
-        e = dataSet.entryForIndex(max(min(Int(ceil(CGFloat(to - from) * phaseX + CGFloat(from))) - 1, dataSet.entryCount - 1), 0))
+        e = dataSet.entryForIndex(max(min(Int(ceil(Double(to - from) * phaseX + Double(from))) - 1, dataSet.entryCount - 1), 0))
         if e != nil
         {
-            CGPathAddLineToPoint(filled, &matrix, CGFloat(e.xIndex), fillMin)
+            CGPathAddLineToPoint(filled, &matrix, CGFloat(e.x), fillMin)
         }
         CGPathCloseSubpath(filled)
         
@@ -539,7 +555,8 @@ public class LineChartRenderer: LineRadarChartRenderer
         guard let
             dataProvider = dataProvider,
             lineData = dataProvider.lineData,
-            animator = animator
+            animator = animator,
+            viewPortHandler = self.viewPortHandler
             else { return }
         
         if (CGFloat(lineData.yValCount) < CGFloat(dataProvider.maxVisibleValueCount) * viewPortHandler.scaleX)
@@ -577,9 +594,12 @@ public class LineChartRenderer: LineRadarChartRenderer
                 
                 let entryCount = dataSet.entryCount
                 
+                let low = dataProvider.lowestVisibleXIndex
+                let high = dataProvider.highestVisibleXIndex
+                
                 guard let
-                    entryFrom = dataSet.entryForXIndex(self.minX < 0 ? 0 : self.minX, rounding: .Down),
-                    entryTo = dataSet.entryForXIndex(self.maxX, rounding: .Up)
+                    entryFrom = dataSet.entryForXPos(low, rounding: .Down),
+                    entryTo = dataSet.entryForXPos(high, rounding: .Up)
                     else { continue }
                 
                 var diff = (entryFrom == entryTo) ? 1 : 0
@@ -591,12 +611,12 @@ public class LineChartRenderer: LineRadarChartRenderer
                 let minx = max(dataSet.entryIndex(entry: entryFrom) - diff, 0)
                 let maxx = min(max(minx + 2, dataSet.entryIndex(entry: entryTo) + 1), entryCount)
                 
-                for j in minx.stride(to: Int(ceil(CGFloat(maxx - minx) * phaseX + CGFloat(minx))), by: 1)
+                for j in minx.stride(to: Int(ceil(Double(maxx - minx) * phaseX + Double(minx))), by: 1)
                 {
                     guard let e = dataSet.entryForIndex(j) else { break }
                     
-                    pt.x = CGFloat(e.xIndex)
-                    pt.y = CGFloat(e.value) * phaseY
+                    pt.x = CGFloat(e.x)
+                    pt.y = CGFloat(e.y * phaseY)
                     pt = CGPointApplyAffineTransform(pt, valueToPixelMatrix)
                     
                     if (!viewPortHandler.isInBoundsRight(pt.x))
@@ -610,7 +630,7 @@ public class LineChartRenderer: LineRadarChartRenderer
                     }
                     
                     ChartUtils.drawText(context: context,
-                        text: formatter.stringFromNumber(e.value)!,
+                        text: formatter.stringFromNumber(e.y)!,
                         point: CGPoint(
                             x: pt.x,
                             y: pt.y - CGFloat(valOffset) - valueFont.lineHeight),
@@ -631,7 +651,8 @@ public class LineChartRenderer: LineRadarChartRenderer
         guard let
             dataProvider = dataProvider,
             lineData = dataProvider.lineData,
-            animator = animator
+            animator = animator,
+            viewPortHandler = self.viewPortHandler
             else { return }
         
         let phaseX = max(0.0, min(1.0, animator.phaseX))
@@ -670,9 +691,12 @@ public class LineChartRenderer: LineRadarChartRenderer
                 (dataSet.circleHoleColor == nil ||
                     dataSet.circleHoleColor == NSUIColor.clearColor())
             
+            let low = dataProvider.lowestVisibleXIndex
+            let high = dataProvider.highestVisibleXIndex
+            
             guard let
-                entryFrom = dataSet.entryForXIndex(self.minX < 0 ? 0 : self.minX, rounding: .Down),
-                entryTo = dataSet.entryForXIndex(self.maxX, rounding: .Up)
+                entryFrom = dataSet.entryForXPos(low, rounding: .Down),
+                entryTo = dataSet.entryForXPos(high, rounding: .Up)
                 else { continue }
             
             var diff = (entryFrom == entryTo) ? 1 : 0
@@ -684,12 +708,12 @@ public class LineChartRenderer: LineRadarChartRenderer
             let minx = max(dataSet.entryIndex(entry: entryFrom) - diff, 0)
             let maxx = min(max(minx + 2, dataSet.entryIndex(entry: entryTo) + 1), entryCount)
             
-            for j in minx.stride(to: Int(ceil(CGFloat(maxx - minx) * phaseX + CGFloat(minx))), by: 1)
+            for j in minx.stride(to: Int(ceil(Double(maxx - minx) * phaseX + Double(minx))), by: 1)
             {
                 guard let e = dataSet.entryForIndex(j) else { break }
 
-                pt.x = CGFloat(e.xIndex)
-                pt.y = CGFloat(e.value) * phaseY
+                pt.x = CGFloat(e.x)
+                pt.y = CGFloat(e.y * phaseY)
                 pt = CGPointApplyAffineTransform(pt, valueToPixelMatrix)
                 
                 if (!viewPortHandler.isInBoundsRight(pt.x))
@@ -745,15 +769,15 @@ public class LineChartRenderer: LineRadarChartRenderer
         CGContextRestoreGState(context)
     }
     
-    private var _highlightPointBuffer = CGPoint()
-    
     public override func drawHighlighted(context context: CGContext, indices: [ChartHighlight])
     {
         guard let
-            lineData = dataProvider?.lineData,
-            chartXMax = dataProvider?.chartXMax,
+            dataProvider = dataProvider,
+            lineData = dataProvider.lineData,
             animator = animator
             else { return }
+        
+        let chartXMax = dataProvider.chartXMax
         
         CGContextSaveGState(context)
         
@@ -783,30 +807,20 @@ public class LineChartRenderer: LineRadarChartRenderer
                     CGContextSetLineDash(context, 0.0, nil, 0)
                 }
                 
-                let xIndex = high.xIndex; // get the x-position
+                let x = high.x; // get the x-position
+                let y = high.y * Double(animator.phaseY)
                 
-                if (CGFloat(xIndex) > CGFloat(chartXMax) * animator.phaseX)
+                if (x > chartXMax * animator.phaseX)
                 {
                     continue
                 }
                 
-                let yValue = set.yValForXIndex(xIndex)
-                if (yValue.isNaN)
-                {
-                    continue
-                }
+                let trans = dataProvider.getTransformer(set.axisDependency)
                 
-                let y = CGFloat(yValue) * animator.phaseY; // get the y-position
-                
-                _highlightPointBuffer.x = CGFloat(xIndex)
-                _highlightPointBuffer.y = y
-                
-                let trans = dataProvider?.getTransformer(set.axisDependency)
-                
-                trans?.pointValueToPixel(&_highlightPointBuffer)
+                let pt = trans.pixelForValue(x: x, y: y)
                 
                 // draw the lines
-                drawHighlightLines(context: context, point: _highlightPointBuffer, set: set)
+                drawHighlightLines(context: context, point: pt, set: set)
             }
         }
         

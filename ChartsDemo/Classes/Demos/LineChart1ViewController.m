@@ -127,34 +127,26 @@
 
 - (void)setDataCount:(int)count range:(double)range
 {
-    NSMutableArray *xVals = [[NSMutableArray alloc] init];
-    
-    for (int i = 0; i < count; i++)
-    {
-        [xVals addObject:[@(i) stringValue]];
-    }
-    
     NSMutableArray *yVals = [[NSMutableArray alloc] init];
     
     for (int i = 0; i < count; i++)
     {
         double mult = (range + 1);
         double val = (double) (arc4random_uniform(mult)) + 3;
-        [yVals addObject:[[ChartDataEntry alloc] initWithValue:val xIndex:i]];
+        [yVals addObject:[[ChartDataEntry alloc] initWithX:i y:val]];
     }
     
     LineChartDataSet *set1 = nil;
     if (_chartView.data.dataSetCount > 0)
     {
         set1 = (LineChartDataSet *)_chartView.data.dataSets[0];
-        set1.yVals = yVals;
-        _chartView.data.xValsObjc = xVals;
+        set1.values = yVals;
         [_chartView.data notifyDataChanged];
         [_chartView notifyDataSetChanged];
     }
     else
     {
-        set1 = [[LineChartDataSet alloc] initWithYVals:yVals label:@"DataSet 1"];
+        set1 = [[LineChartDataSet alloc] initWithValues:yVals label:@"DataSet 1"];
         
         set1.lineDashLengths = @[@5.f, @2.5f];
         set1.highlightLineDashLengths = @[@5.f, @2.5f];
@@ -182,7 +174,7 @@
         NSMutableArray *dataSets = [[NSMutableArray alloc] init];
         [dataSets addObject:set1];
         
-        LineChartData *data = [[LineChartData alloc] initWithXVals:xVals dataSets:dataSets];
+        LineChartData *data = [[LineChartData alloc] initWithDataSets:dataSets];
         
         _chartView.data = data;
     }

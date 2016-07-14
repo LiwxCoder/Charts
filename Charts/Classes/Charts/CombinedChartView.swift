@@ -47,7 +47,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
         renderer = CombinedChartRenderer(chart: self, animator: _animator, viewPortHandler: _viewPortHandler)
     }
     
-    override func calcMinMax()
+    /*override func calcMinMax()
     {
         super.calcMinMax()
         guard let data = _data else { return }
@@ -83,7 +83,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
         {
             _xAxis.axisRange = 1.0
         }
-    }
+    }*/
     
     public override var data: ChartData?
     {
@@ -95,6 +95,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
         {
             super.data = newValue
             (renderer as! CombinedChartRenderer?)!.createRenderers()
+            renderer?.initBuffers()
         }
     }
     
@@ -186,13 +187,6 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
     
     // MARK: - Accessors
     
-    /// flag that enables or disables the highlighting arrow
-    public var drawHighlightArrowEnabled: Bool
-    {
-        get { return (renderer as! CombinedChartRenderer!).drawHighlightArrowEnabled }
-        set { (renderer as! CombinedChartRenderer!).drawHighlightArrowEnabled = newValue }
-    }
-    
     /// if set to true, all values are drawn above their bars, instead of below their top
     public var drawValueAboveBarEnabled: Bool
         {
@@ -206,9 +200,6 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
         get { return (renderer as! CombinedChartRenderer!).drawBarShadowEnabled }
         set { (renderer as! CombinedChartRenderer!).drawBarShadowEnabled = newValue }
     }
-    
-    /// - returns: true if drawing the highlighting arrow is enabled, false if not
-    public var isDrawHighlightArrowEnabled: Bool { return (renderer as! CombinedChartRenderer!).drawHighlightArrowEnabled; }
     
     /// - returns: true if drawing values above bars is enabled, false if not
     public var isDrawValueAboveBarEnabled: Bool { return (renderer as! CombinedChartRenderer!).drawValueAboveBarEnabled; }

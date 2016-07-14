@@ -17,13 +17,12 @@ import CoreGraphics
 
 public class CombinedHighlighter: ChartHighlighter
 {
-    /// Returns a list of SelectionDetail object corresponding to the given xIndex.
-    /// - parameter xIndex:
+    /// Returns a list of SelectionDetail object corresponding to the given xValue.
+    /// - parameter xValue:
     /// - returns:
-    public override func getSelectionDetailsAtIndex(xIndex: Int, dataSetIndex: Int?) -> [ChartSelectionDetail]
+    public override func getSelectionDetailsAtIndex(xValue: Double) -> [ChartSelectionDetail]
     {
         var vals = [ChartSelectionDetail]()
-        var pt = CGPoint()
         
         guard let
             data = self.chart?.data as? CombinedChartData
@@ -38,27 +37,14 @@ public class CombinedHighlighter: ChartHighlighter
             {
                 let dataSet = dataObjects[i].getDataSetByIndex(j)
                 
-                // dont include datasets that cannot be highlighted
+                // don't include datasets that cannot be highlighted
                 if !dataSet.isHighlightEnabled
                 {
                     continue
                 }
                 
-                // extract all y-values from all DataSets at the given x-index
-                let yVals: [Double] = dataSet.yValsForXIndex(xIndex)
-                for yVal in yVals
-                {
-                    pt.y = CGFloat(yVal)
-                    
-                    self.chart!
-                        .getTransformer(dataSet.axisDependency)
-                        .pointValueToPixel(&pt)
-                    
-                    if !pt.y.isNaN
-                    {
-                        vals.append(ChartSelectionDetail(y: pt.y, value: yVal, dataIndex: i, dataSetIndex: j, dataSet: dataSet))
-                    }
-                }
+                // FIXME: Append multiple values on Android
+                vals.appendContentsOf(getDetails(dataSet, dataSetIndex: j, xValue: xValue))
             }
         }
         
